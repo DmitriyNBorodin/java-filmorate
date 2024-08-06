@@ -2,8 +2,8 @@ package ru.yandex.practicum.filmorate;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import ru.yandex.practicum.filmorate.controller.UserController;
 import ru.yandex.practicum.filmorate.exceptions.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
@@ -13,9 +13,11 @@ import java.time.LocalDate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
+@SpringBootTest
 public class UserControllerTest {
-    ApplicationContext context = new AnnotationConfigApplicationContext(TestConfig.class);
-    private final UserController controller = (UserController) context.getBean("userController");
+
+    @Autowired
+    private UserController controller;
     User testUser;
 
     @BeforeEach
