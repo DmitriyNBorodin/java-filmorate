@@ -2,6 +2,8 @@ package ru.yandex.practicum.filmorate;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.exceptions.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
@@ -9,10 +11,14 @@ import ru.yandex.practicum.filmorate.model.Film;
 import java.time.LocalDate;
 import java.util.Random;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class FilmControllerTest {
-    private final FilmController controller = new FilmController();
+    ApplicationContext context = new AnnotationConfigApplicationContext(TestConfig.class);
+
+    private final FilmController controller = (FilmController) context.getBean("filmController");
+
     Film testFilm;
 
     @BeforeEach
@@ -24,7 +30,13 @@ public class FilmControllerTest {
     @Test
     public void filmWithoutNameTest() {
         testFilm.setName("   ");
-        assertThrows(ValidationException.class, () -> controller.addFilm(testFilm));
+        try {
+            controller.addFilm(testFilm);
+        } catch (ValidationException e) {
+            assertEquals("Название фильма не может быть пустым", e.getMessage());
+            return;
+        }
+        fail("Не удалось получить сообщение о добавлении фильма без названия");
     }
 
     @Test
@@ -39,18 +51,36 @@ public class FilmControllerTest {
                 .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
                 .toString();
         testFilm.setDescription(generatedString);
-        assertThrows(ValidationException.class, () -> controller.addFilm(testFilm));
+        try {
+            controller.addFilm(testFilm);
+        } catch (ValidationException e) {
+            assertEquals("Максимальная длина описания - 200 символов", e.getMessage());
+            return;
+        }
+        fail("Не удалось получить сообщение о слишком длинном описании фильма");
     }
 
     @Test
     public void filmWithWrongReleaseDateTest() {
         testFilm.setReleaseDate(LocalDate.of(1800, 1, 1));
-        assertThrows(ValidationException.class, () -> controller.addFilm(testFilm));
+        try {
+            controller.addFilm(testFilm);
+        } catch (ValidationException e) {
+            assertEquals("Дата создания фильма не должна быть ранее 28 декабря 1895 года", e.getMessage());
+            return;
+        }
+        fail("Не удалось получить сообщение о некорректной дате создания фильма");
     }
 
     @Test
     public void negativeFilmDurationTest() {
         testFilm.setDuration(-1);
-        assertThrows(ValidationException.class, () -> controller.addFilm(testFilm));
+        try {
+            controller.addFilm(testFilm);
+        } catch (ValidationException e) {
+            assertEquals("Продолжительность фильмы должна быть положительным числом", e.getMessage());
+            return;
+        }
+        fail("Не удалось получить сообщение об отрицательной или нулевой продолжительности фильма");
     }
 }
