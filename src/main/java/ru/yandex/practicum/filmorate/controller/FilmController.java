@@ -21,7 +21,6 @@ import java.util.List;
 public class FilmController {
     private FilmService filmService;
 
-
     @GetMapping()
     public List<Film> getFilms() {
         return filmService.getAllFilms();

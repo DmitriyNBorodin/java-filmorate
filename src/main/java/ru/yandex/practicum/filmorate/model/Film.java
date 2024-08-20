@@ -28,8 +28,8 @@ public class Film {
         likes.add(userId);
     }
 
-    public boolean removeLike(int userId) {
-        return likes.remove(userId);
+    public void removeLike(int userId) {
+        likes.remove(userId);
     }
 
     public Integer getAmountOfLikes() {
