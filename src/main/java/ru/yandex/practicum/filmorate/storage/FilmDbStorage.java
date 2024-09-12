@@ -90,7 +90,7 @@ public class FilmDbStorage implements FilmStorage {
                 film.getDuration(), film.getMpa().get("id"));
         film.setId(newFilmId);
         if (Optional.ofNullable(film.getGenres()).isPresent())
-            for (HashMap genre : film.getGenres()) {
+            for (Map genre : film.getGenres()) {
                 try {
                     jdbcTemplate.update(INSERT_GENRE_QUERY, newFilmId, genre.get("id"));
                 } catch (RuntimeException e) {

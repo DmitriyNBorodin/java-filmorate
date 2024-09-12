@@ -18,7 +18,7 @@ public class Film {
     private LocalDate releaseDate;
     private int duration;
     private Set<Integer> likes;
-    private List<HashMap<String, Integer>> genres;
+    private List<Map<String, Integer>> genres;
     private Map<String, Integer> mpa;
 
     public Film(int id, String name, String description, LocalDate releaseDate, int duration) {
