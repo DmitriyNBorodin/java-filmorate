@@ -5,10 +5,11 @@ import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 public class InMemoryFilmStorage implements FilmStorage {
@@ -28,8 +29,8 @@ public class InMemoryFilmStorage implements FilmStorage {
         return film;
     }
 
-    public Optional<Film> deleteFilm(Film film) {
-        return Optional.ofNullable(filmMap.remove(film.getId()));
+    public boolean deleteFilm(Film film) {
+        return filmMap.remove(film.getId()) != null;
     }
 
     public Film updateFilm(Film film) {
@@ -37,17 +38,39 @@ public class InMemoryFilmStorage implements FilmStorage {
         return film;
     }
 
-    public Optional<Film> findFilm(int filmId) {
-        return Optional.ofNullable(filmMap.get(filmId));
-    }
 
     public boolean checkFilm(int filmId) {
         if (filmMap.containsKey(filmId)) return true;
         else throw new NotFoundException("Фильм не найден");
     }
 
+    public void addLike(int filmId, int userId) {
+        filmMap.get(filmId).addLike(userId);
+    }
+
+    public void removeLike(int filmId, int userId) {
+        filmMap.get(filmId).removeLike(userId);
+    }
+
+    public List<Film> getMostLikedFilms(int amount) {
+        return filmMap.values().stream()
+                .sorted(Comparator.comparing(Film::obtainAmountOfLikes).reversed())
+                .limit(amount)
+                .collect(Collectors.toList());
+    }
+
     private int getNextId() {
         int currentMaxId = filmMap.keySet().stream().mapToInt(id -> id).max().orElse(0);
         return ++currentMaxId;
+    }
+
+    @Override
+    public Map<Integer, String> getMpaMap() {
+        return null;
+    }
+
+    @Override
+    public Map<Integer, String> getGenresMap() {
+        return null;
     }
 }

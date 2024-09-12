@@ -52,13 +52,7 @@ public class UserServiceSimple implements UserService {
     public boolean addFriend(int userId, int newFriendId) {
         storage.checkUser(userId);
         storage.checkUser(newFriendId);
-        User currentUser = storage.getUserById(userId);
-        if (currentUser.getFriendList().contains(newFriendId)) {
-            throw new ValidationException("Пользователи уже являются друзьями");
-        }
-        currentUser.addFriend(newFriendId);
-        storage.getUserById(newFriendId).addFriend(userId);
-        return true;
+        return storage.addFriend(userId, newFriendId);
     }
 
     @Override
@@ -66,27 +60,23 @@ public class UserServiceSimple implements UserService {
         log.info("Запрос на удаление друга с id {} у пользователя с id {}", removingFriendId, userId);
         storage.checkUser(userId);
         storage.checkUser(removingFriendId);
-        User currentUser = storage.getUserById(userId);
-        if (currentUser.getFriendList().contains(removingFriendId)) {
-            currentUser.removeFriend(removingFriendId);
-            storage.getUserById(removingFriendId).removeFriend(userId);
-        }
+        storage.removeFriend(userId, removingFriendId);
         return getFriends(userId);
     }
 
     @Override
     public List<User> getFriends(int userId) {
         storage.checkUser(userId);
-        return storage.getUserById(userId).getFriendList().stream()
-                .map(friendId -> storage.getUserById(friendId))
+        return storage.getUserFriendList(userId).stream()
+                .map(friendId -> storage.getUserById(friendId).get())
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<User> getCommonFriends(int userId, int anotherUserId) {
-        return storage.getUserById(userId).getFriendList().stream()
-                .filter(storage.getUserById(anotherUserId).getFriendList()::contains)
-                .map(friendId -> storage.getUserById(friendId))
+        return storage.getUserFriendList(userId).stream()
+                .filter(storage.getUserFriendList(anotherUserId)::contains)
+                .map(friendId -> storage.getUserById(friendId).get())
                 .collect(Collectors.toList());
     }
 

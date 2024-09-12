@@ -5,15 +5,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import ru.yandex.practicum.filmorate.exceptions.NotFoundException;
 import ru.yandex.practicum.filmorate.exceptions.ValidationException;
+import ru.yandex.practicum.filmorate.model.CodeEntity;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.FilmDto;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -28,6 +30,25 @@ public class FilmServiceSimple implements FilmService {
     }
 
     @Override
+    public FilmDto getFilmById(int filmId) {
+        return convertToDto(storage.getFilmById(filmId));
+    }
+
+    private FilmDto convertToDto(Film film) {
+        FilmDto filmDto = new FilmDto(film.getId(), film.getName(), film.getDescription(),
+                film.getReleaseDate(), film.getDuration(), film.getLikes());
+        Map<Integer, String> genreNames = storage.getGenresMap();
+        Map<Integer, String> mpaCodes = storage.getMpaMap();
+        int mpaCode = film.getMpa().get("id");
+        filmDto.setMpa(new CodeEntity(mpaCode, mpaCodes.get(mpaCode)));
+        for (Map<String, Integer> genre : film.getGenres()) {
+            int genreId = genre.get("id");
+            filmDto.addGenre(new CodeEntity(genreId, genreNames.get(genreId)));
+        }
+        return filmDto;
+    }
+
+    @Override
     public Film addFilm(Film film) {
         validateFilm(film);
         storage.addFilm(film);
@@ -36,7 +57,7 @@ public class FilmServiceSimple implements FilmService {
     }
 
     @Override
-    public Optional<Film> deleteFilm(Film film) {
+    public boolean deleteFilm(Film film) {
         if (storage.checkFilm(film.getId())) {
             log.info("Удален фильм {} с id {}", film.getName(), film.getId());
         }
@@ -59,7 +80,7 @@ public class FilmServiceSimple implements FilmService {
         log.info("Добавление лайка пользователем с id {} для фильма с id {}", userId, filmId);
         storage.checkFilm(filmId);
         userService.checkUserById(userId);
-        storage.getFilmById(filmId).addLike(userId);
+        storage.addLike(filmId, userId);
         return storage.getFilmById(filmId);
     }
 
@@ -67,17 +88,51 @@ public class FilmServiceSimple implements FilmService {
     public boolean removeLike(int filmId, int userId) {
         storage.checkFilm(filmId);
         userService.checkUserById(userId);
-        storage.getFilmById(filmId).removeLike(userId);
+        storage.removeLike(filmId, userId);
         return true;
     }
 
     @Override
     public List<Film> getMostLikedFilms(int amount) {
         log.info("Получение списка популярных фильмов");
-        return storage.getAllFilms().stream()
-                .sorted(Comparator.comparing(Film::getAmountOfLikes).reversed())
-                .limit(amount)
-                .collect(Collectors.toList());
+        return storage.getMostLikedFilms(amount);
+    }
+
+    private boolean validateGenre(Film film) {
+        Set<Integer> genreCodes = storage.getGenresMap().keySet();
+        for (Map<String, Integer> filmGenre : film.getGenres()) {
+            if (!genreCodes.contains(filmGenre.get("id"))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public CodeEntity getMpaByCode(int mpaCode) {
+        Map<Integer, String> mpaMap = storage.getMpaMap();
+        if (!mpaMap.containsKey(mpaCode)) {
+            throw new NotFoundException("Неизвестный код mpa " + mpaCode);
+        }
+        return new CodeEntity(mpaCode, mpaMap.get(mpaCode));
+    }
+
+    @Override
+    public List<CodeEntity> getAllMpaCodes() {
+        return storage.getMpaMap().entrySet().stream().map(entry -> new CodeEntity(entry.getKey(), entry.getValue())).toList();
+    }
+
+    @Override
+    public CodeEntity getGenreByCode(int genreCode) {
+        Map<Integer, String> genresMap = storage.getGenresMap();
+        if (!genresMap.containsKey(genreCode)) {
+            throw new NotFoundException("Неизвестный код жанра " + genreCode);
+        }
+        return new CodeEntity(genreCode, genresMap.get(genreCode));
+    }
+
+    @Override
+    public List<CodeEntity> getAllGenres() {
+        return storage.getGenresMap().entrySet().stream().map(entry -> new CodeEntity(entry.getKey(), entry.getValue())).toList();
     }
 
     public void validateFilm(Film film) {
@@ -93,6 +148,12 @@ public class FilmServiceSimple implements FilmService {
         } else if (film.getDuration() <= 0) {
             FilmServiceSimple.log.info("Попытка создать фильм с отрицательной или нулевой продолжительностью");
             throw new ValidationException("Продолжительность фильмы должна быть положительным числом");
+        } else if (!storage.getMpaMap().containsKey(film.getMpa().get("id"))) {
+            FilmServiceSimple.log.info("Попытка создать фильм с несуществующим mpa");
+            throw new ValidationException("Код mpa должен присутствовать в таблице");
+        } else if (!validateGenre(film)) {
+            FilmServiceSimple.log.info("Попытка создать фильм с несуществующим кодом жанра");
+            throw new ValidationException("Код жанра должен присутствовать в таблице");
         }
     }
 }
